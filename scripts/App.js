@@ -1,10 +1,188 @@
-import React, { Component } from 'react';
+import React, { Component } from 'react'
+
+class Recog extends Component {
+  constructor(props) {
+    super(props)
+  }
+
+  componentDidMount() {
+    var recognition = new webkitSpeechRecognition()
+    recognition.continuous = true
+    recognition.interimResults = true
+    recognition.onresult = (event) => {
+      let interim_transcript = ''
+      let confidence = 1.0
+      for (var i = event.resultIndex; i < event.results.length; ++i) {        
+        let r = event.results[i]
+        if (r.isFinal) {
+          this.props.onAppend(r[0].transcript)          
+        } else {
+          interim_transcript += r[0].transcript
+          confidence *= r[0].confidence
+        }
+      }
+      this.props.onPeek(interim_transcript,confidence)
+    }
+    recognition.onend = () => {
+      console.log('ended / restart')
+      recognition.start()
+    }
+    recognition.start()
+  }
+  
+  render() {
+    return <div/>
+  }
+}
+
+class TTS extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {}
+  }
+  loadVoices() {
+    let voices = speechSynthesis.getVoices()
+    this.setState({voices:voices})
+  }
+  componentDidMount() {        
+    this.loadVoices()  
+    window.speechSynthesis.onvoiceschanged = () => this.loadVoices()
+    this.setState({text:'hello'})
+  }
+  speak(text) {
+	  let msg = new SpeechSynthesisUtterance()
+
+    msg.text = text
+  
+    msg.volume = 1.0
+	  msg.rate = 1.0
+	  msg.pitch = 1.0
+  
+    //msg.voice = speechSynthesis.getVoices().filter(function(voice) { return voice.name == voiceSelect.value; })[0];
+	
+    // Queue this utterance.
+	  window.speechSynthesis.speak(msg)
+  }
+  render() {
+    return <div/>
+  }
+}
+
+class Chat extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {lines:[]}
+  }
+
+  push(line) {
+    let lines = this.state.lines
+    lines.push({
+      id:lines.length,
+      user:line.user,
+      msg:line.msg
+    })
+    this.setState({lines:lines})
+  }
+
+  render() {
+    return <div>
+      {this.state.lines.map(line => <Line key={line.id} user={line.user} msg={line.msg}/>)}
+      </div>
+  }
+}
+
+class Line extends Component {
+  render() {
+    let {user,msg,interim,confidence} = this.props
+    interim = interim || ''
+    return <p>
+      {user} : {msg} {interim != '' ? 
+        <span style={{'color':'#aaa'}}>{interim} ({(confidence * 100).toFixed(1)}%)</span>
+        : <span/>
+      }          
+    </p>
+  }
+}
+
+let database = {
+  '인사' : {
+    pattern : x => /안녕/.test(x),
+    logic : () => '안녕하세요!'
+  },
+  '공격' : {
+    pattern : x => /(공격)|(때려)|(잡아)|(자바)/.test(x),
+    logic : () => '알겠어요! 공격!'
+  },
+  '도움' : {
+    pattern : x => /(도와)|(도움)/.test(x),
+    logic : () => '도와드릴께요!'
+  },
+  '후퇴' : {
+    pattern : x => /(물러나)|(후퇴)|(숨어)/.test(x),
+    logic : () => '일단 물러날께요!'
+  },
+  'fallback' : {
+    pattern : x => true,
+    logic : (context) => `${context.sentence}라고요? 잘 모르겠어요.`
+  }
+}
+
+class Chatbot extends Component {
+  listen(msg) {
+    let {text} = msg
+
+    for (let k in database) {
+      let v = database[k]
+      if (v.pattern(text)) {
+        this.say(v.logic({sentence:text}))
+        break
+      }
+    }
+  }
+  say(text) {
+    this.props.onSay(text)
+  }
+  render() {
+    return <p/>
+  }
+}
 
 export default class App extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {text:'',interim:'',user:'유저',ai:'AI'}
+  }
+  peek(text,confidence) {
+    this.setState({interim:text,confidence:confidence})
+  }
+  append(text) {
+    this.setState({text:this.state.text + text})
+    this.chat.push({user:this.state.user,msg:text})
+    this.bot.listen({user:this.state.user,text:text})    
+    this.setState({text:''})    
+  }
+  say(text) {
+    this.chat.push({user:this.state.ai,msg:text})
+    this.tts.speak(text)
+  }
   render() {
     return (
-      // Add your component markup and other subcomponent references here.
-      <h1>Hello, World!</h1>
+      <div>
+        <h1>Chatbot</h1>      
+        <Chatbot ref={e => this.bot = e} onSay={this.say.bind(this)}/>
+        <Chat ref={e=>this.chat = e}/>
+        <TTS ref={e=>this.tts = e}/>
+        <Recog onPeek={this.peek.bind(this)} onAppend={this.append.bind(this)}/>        
+        {this.state.text != '' || this.state.interim != '' ?
+          <Line 
+            user={this.state.user} 
+            msg={this.state.text} 
+            interim={this.state.interim}
+            confidence={this.state.confidence}
+            />            
+          : <p/>
+        }
+      </div>
     );
   }
 }
