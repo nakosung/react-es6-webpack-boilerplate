@@ -1,8 +1,12 @@
 import React, { Component } from 'react'
 
+import Bootstrap from 'bootstrap/dist/css/bootstrap.css' 
+import _ from 'lodash'
+
 class Recog extends Component {
   constructor(props) {
     super(props)
+    this.state = {listening:false}
   }
 
   componentDidMount() {
@@ -24,14 +28,19 @@ class Recog extends Component {
       this.props.onPeek(interim_transcript,confidence)
     }
     recognition.onend = () => {
-      console.log('ended / restart')
-      recognition.start()
+      this.setState({listening:false})
+      setTimeout(() => recognition.start(), 250)
+    }
+    recognition.onstart = () => {
+      this.setState({listening:true})
     }
     recognition.start()
   }
   
   render() {
-    return <div/>
+    return <div>
+      음성 인식 상태: {this.state.listening ? '듣고 있습니다' : '듣지 못하고 있습니다'}
+    </div>
   }
 }
 
@@ -95,7 +104,7 @@ class Line extends Component {
   render() {
     let {user,msg,interim,confidence} = this.props
     interim = interim || ''
-    return <p>
+    return <p className={user == 'AI' ? 'text-danger well well-sm' : 'well well-sm'}>
       {user} : {msg} {interim != '' ? 
         <span style={{'color':'#aaa'}}>{interim} ({(confidence * 100).toFixed(1)}%)</span>
         : <span/>
@@ -121,6 +130,10 @@ let database = {
     pattern : x => /(물러나)|(후퇴)|(숨어)/.test(x),
     logic : () => '일단 물러날께요!'
   },
+  '헬프' : {
+    pattern : x => /(할 수)|(할 줄)/.test(x),
+    logic : () => `제가 할 줄 아는 건, ${_.without(_.keys(database),'fallback').join(', ')}이에요.`
+  },
   'fallback' : {
     pattern : x => true,
     logic : (context) => `${context.sentence}라고요? 잘 모르겠어요.`
@@ -128,22 +141,33 @@ let database = {
 }
 
 class Chatbot extends Component {
+  constructor(props) {
+    super(props)
+
+    this.state = {intent:''}
+  }
   listen(msg) {
     let {text} = msg
 
     for (let k in database) {
       let v = database[k]
       if (v.pattern(text)) {
+        this.setState({intent:k})
         this.say(v.logic({sentence:text}))
         break
       }
     }
   }
+  componentDidMount() {
+    setTimeout(() => this.say("안녕하세요"),500)
+  }
   say(text) {
     this.props.onSay(text)
   }
   render() {
-    return <p/>
+    return <p>
+      파악한 의도: {this.state.intent}
+      </p>
   }
 }
 
@@ -167,12 +191,12 @@ export default class App extends Component {
   }
   render() {
     return (
-      <div>
-        <h1>Chatbot</h1>      
+      <div className='container' style={{padding:10}}>
+        <h1>음성 인식 챗봇 데모</h1>      
         <Chatbot ref={e => this.bot = e} onSay={this.say.bind(this)}/>
-        <Chat ref={e=>this.chat = e}/>
         <TTS ref={e=>this.tts = e}/>
         <Recog onPeek={this.peek.bind(this)} onAppend={this.append.bind(this)}/>        
+        <Chat ref={e=>this.chat = e}/>        
         {this.state.text != '' || this.state.interim != '' ?
           <Line 
             user={this.state.user} 
