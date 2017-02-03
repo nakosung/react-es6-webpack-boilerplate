@@ -202,6 +202,7 @@ export default class App extends Component {
       this.textToKill = ''
       return
     }
+    this.textToKill = ''
     this.cancelAutoComplete()
     this.setState({ text: this.state.text + text })
     this.chat.push({ user: this.state.user, msg: text })
