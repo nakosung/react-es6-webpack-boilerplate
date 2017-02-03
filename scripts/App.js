@@ -187,7 +187,7 @@ export default class App extends Component {
       this.timer = setTimeout(() => {
         this.peek('', 0)
         this.append(text)
-        this.textToKill += text
+        this.textToKill = text
       }, 250)
     }
   }
