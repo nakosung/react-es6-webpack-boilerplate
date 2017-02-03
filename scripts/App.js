@@ -27,6 +27,9 @@ class Recog extends Component {
       }
       this.props.onPeek(interim_transcript,confidence)
     }
+    recognition.onerror = e => {
+      console.error(e)
+    }
     recognition.onend = () => {
       this.setState({listening:false})
       setTimeout(() => recognition.start(), 250)
