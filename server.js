@@ -5,10 +5,10 @@ const config = require('./webpack.config');
 new WebpackDevServer(webpack(config), {
   publicPath: config.output.publicPath,
   hot: true,
-  historyApiFallback: true
-}).listen(5000, 'localhost', (err) => {
+  historyApiFallback: true,
+}).listen(5000, '0.0.0.0', (err) => {
   if (err) {
     console.log(err);
   }
-  console.log('Listening at localhost:5000');
+  console.log('Listening at 0.0.0.0:5000');
 });
