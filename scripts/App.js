@@ -14,10 +14,10 @@ class Recog extends Component {
     var recognition = new webkitSpeechRecognition()
     recognition.continuous = true
     recognition.interimResults = true
-    recognition.onsoundstart = () => this.setState({sound:true})
-    recognition.onsoundend = () => this.setState({sound:false})
-    recognition.onspeechstart = () => this.setState({speech:true})
-    recognition.onspeechend = () => this.setState({speech:false})
+    recognition.onsoundstart = () => this.setState({ sound: true })
+    recognition.onsoundend = () => this.setState({ sound: false })
+    recognition.onspeechstart = () => this.setState({ speech: true })
+    recognition.onspeechend = () => this.setState({ speech: false })
     recognition.onresult = (event) => {
       let interim_transcript = ''
       let confidence = 1.0
@@ -48,7 +48,7 @@ class Recog extends Component {
     this.recognition = recognition
     this.interval = setInterval(() => {
       this.poll()
-    },250)
+    }, 250)
   }
 
   poll() {
@@ -67,28 +67,23 @@ class Recog extends Component {
   enable(enable) {
     if (enable != this.state.active) {
       if (!enable) {
-        this.setState({active:false})
+        this.setState({ active: false })
       } else {
-        this.setState({active:true})
+        this.setState({ active: true })
       }
       this.poll()
     }
   }
 
   render() {
+    let dict = {
+      active: '활성화',
+      listening: '듣는 중',
+      sound: 'sound',
+      speech: 'speech'
+    }
     return <div>
-      <p>
-        음성 인식 활성화: {this.state.active ? '켜짐' : '꺼짐'}
-      </p>
-      <p>
-        음성 인식 상태: {this.state.listening ? '듣고 있습니다' : '듣지 못하고 있습니다'}
-      </p>
-      <p>
-        Sound: {this.state.sound ? 'active' : '-'}
-      </p>
-      <p>
-        Speech: {this.state.speech ? 'active' : '-'}
-      </p>
+      {_.map(dict,(v,k) => <span key={k}>{this.state[k] ? <span className="badge">{v}</span> : ''}</span>)}
     </div>
   }
 }
@@ -111,8 +106,8 @@ class TTS extends Component {
     if (this.state.speaking) {
       return false
     }
-    
-    this.setState({speaking:true})
+
+    this.setState({ speaking: true })
     let msg = new SpeechSynthesisUtterance()
 
     msg.text = text
@@ -129,7 +124,7 @@ class TTS extends Component {
       if (timer) {
         clearTimeout(timer)
       }
-      this.setState({speaking:false})
+      this.setState({ speaking: false })
       this.props.onStop()
     }
     timer = setTimeout(() => {
@@ -139,7 +134,7 @@ class TTS extends Component {
 
     msg.onend = done
     msg.onerror = (e) => {
-      console.error('utterance',e)
+      console.error('utterance', e)
       done()
     }
 
@@ -196,21 +191,21 @@ class Chatbot extends Component {
     this.state = { intent: '' }
   }
   listen(msg) {
-    fetch('/api',{
+    fetch('/api', {
       method: 'post',
       headers: new Headers({
-	      'Content-Type': 'application/json'
+        'Content-Type': 'application/json'
       }),
       body: JSON.stringify(msg)
     })
-    .then(response => response.json())
-    .then(({intent,text}) => {
-      this.setState({ intent: intent })
-      this.say(text)
-    })
-    .catch(e => {
-      console.error("Chatbot got an error: " + e)
-    })
+      .then(response => response.json())
+      .then(({intent, text}) => {
+        this.setState({ intent: intent })
+        this.say(text)
+      })
+      .catch(e => {
+        console.error("Chatbot got an error: " + e)
+      })
   }
   say(text) {
     this.props.onSay(text)
@@ -252,7 +247,7 @@ export default class App extends Component {
   }
   append(text) {
     if (this.textToKill.length && text.indexOf(this.textToKill) >= 0) {
-      console.log(text,this.textToKill)
+      console.log(text, this.textToKill)
       this.textToKill = ''
       return
     }
@@ -273,7 +268,7 @@ export default class App extends Component {
   }
   scrollToBottom() {
     const node = ReactDOM.findDOMNode(this.pane)
-    node.scrollIntoView({behavior:'smooth'})
+    node.scrollIntoView({ behavior: 'smooth' })
   }
   componentWillUnmount() {
     this.cancelAutoComplete()
@@ -283,12 +278,23 @@ export default class App extends Component {
       <div className='container' style={{ padding: 10 }}>
         <h1>음성 인식 챗봇 데모</h1>
         <p>사용자: {this.state.user}</p>
-        <Chatbot ref={e => this.bot = e} onSay={this.say.bind(this)} />
-        <TTS ref={e => this.tts = e} 
-          onStart={() => this.stt.enable(false)}
-          onStop={() => this.stt.enable(true)}
-          />
-        <Recog ref={e => this.stt = e} onPeek={this.peek.bind(this)} onAppend={this.append.bind(this)} />
+        <div className="row">
+          <div className="col-sm-4">
+            <Chatbot
+              ref={e => this.bot = e} onSay={this.say.bind(this)} />
+          </div>
+          <div className="col-sm-4">
+            <TTS
+              ref={e => this.tts = e}
+              onStart={() => this.stt.enable(false)}
+              onStop={() => this.stt.enable(true)}
+            />
+          </div>
+          <div className="col-sm-4">
+            <Recog
+              ref={e => this.stt = e} onPeek={this.peek.bind(this)} onAppend={this.append.bind(this)} />
+          </div>
+        </div>
         <div className='pre-scrollable'>
           <Chat ref={e => this.chat = e} />
           {this.state.text != '' || this.state.interim != '' ?
@@ -300,7 +306,7 @@ export default class App extends Component {
             />
             : <p />
           }
-          <div ref={e => this.pane = e}/>
+          <div ref={e => this.pane = e} />
         </div>
       </div>
     );

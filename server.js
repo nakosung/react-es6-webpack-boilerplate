@@ -3,6 +3,8 @@ const WebpackDevServer = require('webpack-dev-server')
 const config = require('./webpack.config')
 const express = require('express')
 
+var db = {}
+
 var database = {
   'hello':{
     pattern: x => /@BEGIN/.test(x),
@@ -28,6 +30,28 @@ var database = {
     pattern: x => /(할 수)|(할 줄)/.test(x),
     logic: () => `제가 할 줄 아는 건, ${_.without(_.keys(database), 'fallback').join(', ')}이에요.`
   },
+  'test' : {
+    pattern: x => /(.+)(은|는).*(뭐야|뭐니)/.test(x),
+    logic: (c) => {
+      var match = c.sentence.match(/(.+)(은|는).*(뭐야|뭐니)/)
+      var x = match[1].trim()
+      if (db[x]) {
+        return `${x}는 ${db[x]}에요`
+      } else {
+        return null // fallback
+      }
+    }
+  },
+  'let': {
+    pattern: x => /(.+)(는|은)(.+)야/.test(x),
+    logic: (c) => {
+      var match = c.sentence.match(/(.+)(는|은)(.+)야/)
+      var x = match[1].trim()
+      var y = match[3].trim()
+      db[x] = y
+      return `${x}는 ${y}군요. 기억할께요`
+    }
+  },
   'fallback': {
     pattern: x => true,
     logic: (context) => `${context.sentence}라고요? 잘 모르겠어요.`
@@ -40,10 +64,13 @@ function process(msg) {
   for (var k in database) {
     var v = database[k]
     if (v.pattern(text)) {
-      return Promise.resolve({
-        intent: k,
-        text: v.logic({ sentence: text })
-      })
+      var reply = v.logic({ sentence: text })
+      if (reply) {
+        return Promise.resolve({
+          intent: k,
+          text: reply
+        })
+      }
     }
   }
 
